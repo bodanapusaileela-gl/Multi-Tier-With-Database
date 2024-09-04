@@ -1,0 +1,90 @@
+
+-------mysqllllapplicatio---
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: webapp
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: webapp
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8
+        env:
+        # Use secret in real usage for password security
+        - name: MYSQL_ROOT_PASSWORD
+          value: Test@123
+        - name: MYSQL_DATABASE
+          value: "bankappdb"
+        ports:
+        - containerPort: 3306
+          name: mysql
+
+
+
+
+-----------java application----
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backapp
+  namespace: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backapp
+  template:
+    metadata:
+      labels:
+        app: backapp
+    spec:
+      containers:
+      - name: backapp
+        image: bodanapusaileela/bankapp:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://mysql-service:3306/bankappdb?useSSL=false"
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: Test@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backapp-service
+  namespace: webapp
+spec:
+  selector:
+    app: backapp
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: LoadBalancer
